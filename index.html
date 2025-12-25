@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物理实验计算器</title>
+    <!-- 1. CSS样式写在这里 -->
+    <style>
+        /* 所有样式代码（比如适配手机、按钮样式、输入框样式） */
+        body {max-width: 600px; margin: 20px auto; padding: 0 10px; font-size: 16px;}
+        .project-select {margin: 20px 0; padding: 10px; width: 100%;}
+        .input-item {margin: 10px 0;}
+        input {padding: 8px; width: 200px;}
+        button {padding: 10px 20px; background: #0078d4; color: white; border: none; border-radius: 5px; margin-top: 20px;}
+        #result {margin-top: 20px; font-size: 18px; color: #d70000;}
+    </style>
+</head>
+<body>
+    <!-- 页面内容（项目选择、输入框、按钮） -->
+    <h2>物理实验计算工具</h2>
+    <select id="project" class="project-select">
+        <option value="">请选择计算项目</option>
+        <option value="project1">项目1：牛顿环曲率半径计算</option>
+        <option value="project2">项目2：太赫兹脉冲自旋进动计算</option>
+    </select>
+    <div id="input-area" class="input-area"></div>
+    <button onclick="calculate()">计算结果</button>
+    <div id="result">结果将显示在这里</div>
+
+    <!-- 2. JS计算逻辑写在这里 -->
+    <script>
+        // 所有JS代码（项目配置、计算逻辑）
+        const projects = {
+            project1: {
+                inputs: [{name: 'r', label: '牛顿环半径r (mm)'}, {name: 'k', label: '级数k'}, {name: 'λ', label: '入射光波长λ (nm)'}],
+                calc: (data) => {
+                    const r = parseFloat(data.r);
+                    const k = parseFloat(data.k);
+                    const λ = parseFloat(data.λ) / 1000;
+                    return `曲率半径R = ${(r*r/(k*λ)).toFixed(2)} mm`;
+                }
+            },
+            project2: {
+                inputs: [{name: 'B', label: '磁场强度B (T)'}, {name: 'τ', label: '脉冲时间τ (ps)'}, {name: 'θ', label: '初始角度θ (°)'}],
+                calc: (data) => {
+                    const B = parseFloat(data.B);
+                    const τ = parseFloat(data.τ);
+                    const θ = parseFloat(data.θ);
+                    const ω = 1.76e11 * B;
+                    const precession = ω * τ * 1e-12 * (180/Math.PI);
+                    const final = θ + precession;
+                    return `自旋进动最终角度 = ${final.toFixed(2)} °`;
+                }
+            }
+        };
+
+        document.getElementById('project').addEventListener('change', function() {
+            const projectKey = this.value;
+            const inputArea = document.getElementById('input-area');
+            inputArea.innerHTML = '';
+            if (!projectKey) return;
+            const project = projects[projectKey];
+            project.inputs.forEach(item => {
+                inputArea.innerHTML += `<div class="input-item"><label>${item.label}：</label><input type="number" id="${item.name}" step="0.01" required></div>`;
+            });
+        });
+
+        function calculate() {
+            const projectKey = document.getElementById('project').value;
+            if (!projectKey) {alert('请先选择计算项目！'); return;}
+            const project = projects[projectKey];
+            const data = {};
+            project.inputs.forEach(item => {
+                const value = document.getElementById(item.name).value;
+                if (!value) {alert(`请填写${item.label}！`); return;}
+                data[item.name] = value;
+            });
+            const result = project.calc(data);
+            document.getElementById('result').innerText = result;
+        }
+    </script>
+</body>
+</html>

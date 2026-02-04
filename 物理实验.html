@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物理实验计算工具（整合版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- 仅偏振光实验需要 -->
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {max-width: 900px; margin: 20px auto; padding: 0 15px; font-family: "Microsoft YaHei", sans-serif; font-size: 16px; line-height: 1.6;}
+        h2 {text-align: center; color: #2c3e50; margin-bottom: 30px; padding-bottom: 10px; border-bottom: 2px solid #3498db;}
+        
+        /* 实验选择框 */
+        .project-wrap {margin-bottom: 25px;}
+        .project-wrap label {font-weight: bold; color: #34495e; margin-right: 10px; font-size: 17px;}
+        #project {width: 100%; padding: 12px; border: 2px solid #3498db; border-radius: 6px; font-size: 16px; color: #2c3e50; background: #f8f9fa;}
+        
+        /* 通用输入区域样式（保留各实验原始结构） */
+        #input-area {margin: 25px 0; padding: 25px; background: #f8f9fa; border-radius: 10px; border: 1px solid #ddd;}
+        .input-group {margin-bottom: 30px;}
+        .input-group h3 {color: #3498db; margin-bottom: 20px; font-size: 18px; padding-bottom: 8px; border-bottom: 1px solid #eee;}
+        .input-group h4 {color: #2c3e50; margin: 15px 0 10px; font-size: 16px;}
+        
+        /* 表格样式（修复多余<符号后保留原始样式） */
+        .table-container {overflow-x: auto; margin: 20px 0;}
+        .table-input {width: 100%; border-collapse: collapse; margin: 15px 0; background: white;}
+        .table-input th, .table-input td {border: 1px solid #bdc3c7; padding: 12px; text-align: center; min-width: 80px;}
+        .table-input th {background: #3498db; color: white; font-weight: bold;}
+        .table-input td {background: white;}
+        .table-input input {width: 110%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 15px;}
+        .table-input input:focus {outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);}
+        
+        /* 按钮样式（保留原始样式） */
+        .calc-btn {width: 100%; padding: 16px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 10px;}
+        .calc-btn:hover {background: #2980b9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1);}
+        .calc-btn:active {transform: translateY(0);}
+        
+        /* 结果区域（保留原始样式） */
+        #result-wrap {margin-top: 30px;}
+        .result-box {padding: 25px; background: linear-gradient(135deg, #e8f4fd, #d4e7fa); border-radius: 10px; font-size: 17px; color: #2c3e50; margin-bottom: 25px; border: 1px solid #bdd7f0;}
+        .result-box h3 {color: #2c3e50; margin-bottom: 15px; font-size: 20px;}
+        .result-content {background: white; padding: 20px; border-radius: 8px; margin-top: 10px;}
+        
+        /* 误差分析（保留原始样式） */
+        .error-analysis {margin-top: 20px; padding: 20px; background: #fdf2e8; border-radius: 10px; border: 1px solid #f0c38e;}
+        .error-analysis h4 {margin-bottom: 15px; color: #d35400; font-size: 18px;}
+        .error-content {padding-left: 10px;}
+        .error-content p {margin-bottom: 10px;}
+        
+        /* 偏振光实验专属 - 图表容器 */
+        .chart-container {margin: 30px auto; height: 500px; position: relative; display: none;}
+        
+        /* 光栅衍射实验专属样式 */
+        .input-item {margin: 12px 0; display: flex; align-items: center; flex-wrap: wrap;}
+        .input-item label {flex: 1; min-width: 120px; color: #34495e; font-size: 15px;}
+        .input-item input {flex: 2; min-width: 150px; padding: 10px; border: 1px solid #bdc3c7; border-radius: 4px; font-size: 15px;}
+        .tip {color: #7f8c8d; font-style: italic; text-align: center; padding: 25px; background: #f5f5f5; border-radius: 8px; border: 1px dashed #bdc3c7;}
+        .formula-box {background: #e8f6f3; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #76d7c4;}
+        .formula {font-family: "Times New Roman", serif; font-size: 18px; text-align: center; margin: 10px 0;}
+        .input-row {margin: 20px 0; display: flex; align-items: center;}
+        .input-row label {font-weight: bold; margin-right: 15px; min-width: 150px;}
+        .input-row input {padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; width: 200px;}
+        
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            body {padding: 0 10px;}
+            .table-input th, .table-input td {padding: 8px; font-size: 14px;}
+            .table-input input {padding: 6px; font-size: 14px;}
+            .input-row, .input-item {flex-direction: column; align-items: flex-start;}
+            .input-row label, .input-item label {margin-bottom: 5px;}
+            .input-row input, .input-item input {width: 100%;}
+            .chart-container {height: 400px;}
+        }
+    </style>
+</head>
+<body>
+    <h2>物理实验计算工具（整合版）</h2>
+
+    <!-- 实验选择框 -->
+    <div class="project-wrap">
+        <label for="project">选择实验项目：</label>
+        <select id="project">
+            <option value="">-- 请选择要进行的实验 --</option>
+            <option value="torsion">1. 扭摆法研究受迫振动</option>
+            <option value="polarization">2. 偏振光实验</option>
+            <option value="grating">3. 光栅衍射实验</option>
+        </select>
+    </div>
+
+    <!-- 输入区域（动态生成对应实验的原始输入结构） -->
+    <div id="input-area">
+        <div class="tip">请先选择上方的实验项目</div>
+    </div>
+
+    <!-- 计算按钮 -->
+    <button id="calc-btn" class="calc-btn" onclick="calculate()">提交数据并计算/绘图</button>
+
+    <!-- 结果展示区域 -->
+    <div id="result-wrap">
+        <div id="result" class="result-box">
+            <h3>计算结果</h3>
+            <div id="result-content" class="result-content">
+                计算结果将显示在这里
+            </div>
+        </div>
+        
+        <!-- 偏振光实验专属 - 图表容器 -->
+        <div class="chart-container" id="polar-chart-container">
+            <canvas id="experiment-chart"></canvas>
+        </div>
+        
+        <div id="error-analysis" class="error-analysis">
+            <h4>误差原因分析：</h4>
+            <div id="error-content" class="error-content">
+                选择实验并提交数据后，将显示对应的误差分析
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量：当前选中实验、图表实例
+        let currentExperiment = "";
+        let chartInstance = null;
+
+        // ========== 实验切换逻辑（保留各实验原始输入结构，修复多余<符号） ==========
+        document.getElementById('project').addEventListener('change', function() {
+            currentExperiment = this.value;
+            const inputArea = document.getElementById('input-area');
+            const chartContainer = document.getElementById('polar-chart-container');
+            
+            // 隐藏图表容器
+            chartContainer.style.display = 'none';
+            
+            if (!currentExperiment) {
+                inputArea.innerHTML = '<div class="tip">请先选择上方的实验项目</div>';
+                return;
+            }
+
+            // 生成对应实验的原始输入结构（已修复所有表格多余<符号）
+            switch(currentExperiment) {
+                // 1. 扭摆法研究受迫振动（完全还原原始格式）
+                case 'torsion':
+                    inputArea.innerHTML = `
+                        <div class="input-group">
+                            <h3>扭摆法研究受迫振动</h3>
+                            <div class="formula-box">
+                                <p>计算公式：ω₀ = 2π / T，β = (1/(5T̄)) × (1/5) × Σ ln(θᵢ/θᵢ₊₅)</p>
+                            </div>
+                            <div class="input-row">
+                                <label for="torsion_subproject">选择具体实验：</label>
+                                <select id="torsion_subproject" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                                    <option value="natural_freq">1. 测量扭摆的固有频率ω₀</option>
+                                    <option value="damping_coeff">2. 测量阻尼系数β</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 固有频率测量表格（修复多余<符号） -->
+                            <div id="natural_freq_input" class="table-container">
+                                <h4>测量数据表（测量10个周期）</h4>
+                                <table class="table-input">
+                                    <thead>
+                                        <tr>
+                                            <<th>测量次数</</th>
+                                            <<th>1</</th>
+                                            <<th>2</</th>
+                                            <<th>3</</th>
+                                            <<th>4</</th>
+                                            <<th>5</</th>
+                                            <<th>6</</th>
+                                            <<th>7</</th>
+                                            <<th>8</</th>
+                                            <<th>9</</th>
+                                            <<th>10</</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="background: #f0f7ff; font-weight: bold;">周期 T (s)</td>
+                                            <td><input type="number" id="T_1" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_2" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_3" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_4" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_5" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_6" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_7" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_8" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_9" step="0.001" placeholder="输入" required></td>
+                                            <td><input type="number" id="T_10" step="0.001" placeholder="输入" required></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <p style="color: #666; margin-top: 10px; font-size: 14px;">
+                                    提示：请测量10次扭摆的周期，填写上表。系统将自动计算平均值并得出固有频率ω₀。
+                                </p>
+                            </div>
+                            
+                            <!-- 阻尼系数测量表格（修复多余<符号） -->
+                            <div id="damping_coeff_input" class="table-container" style="display: none;">
+                                <div class="input-row">
+                                    <label for="avg_period">周期平均值 T̄ (s):</label>
+                                    <input type="number" id="avg_period" step="0.001" placeholder="输入周期平均值" required>
+                                </div>
+                                <h4>振幅测量数据表（测量10个振幅）</h4>
+                                <table class="table-input">
+                                    <thead>
+                                        <tr>
+                                            <<th>测量次数</</th>
+                                            <<th>1</</th>
+                                            <<th>2</</th>
+                                            <<th>3</</th>
+                                            <<th>4</</th>
+                                            <<th>5</</th>
+                                            <<th>6</</th>
+                                            <<th>7</</th>
+                                            <<th>8</</th>
+                                            <<th>9</</th>
+                                            <<th>10</</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="background: #fff0f0; font-weight: bold;">振幅 θ (°)</td>
+                                            <td><input type="number" id="theta_1" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_2" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_3" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_4" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_5" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_6" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_7" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_8" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_9" step="0.1" placeholder="输入" required></td>
+                                            <td><input type="number" id="theta_10" step="0.1" placeholder="输入" required></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <p style="color: #666; margin-top: 10px; font-size: 14px;">
+                                    提示：请先输入周期平均值T̄，然后测量10次扭摆的振幅。系统将使用第1-5次与第6-10次的振幅比值计算阻尼系数β。
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 扭摆法小实验切换
+                    document.getElementById('torsion_subproject').addEventListener('change', function() {
+                        const subproject = this.value;
+                        document.getElementById('natural_freq_input').style.display = subproject === 'natural_freq' ? 'block' : 'none';
+                        document.getElementById('damping_coeff_input').style.display = subproject === 'damping_coeff' ? 'block' : 'none';
+                    });
+                    break;
+
+                // 2. 偏振光实验（完全还原原始格式，修复多余<符号）
+                case 'polarization':
+                    inputArea.innerHTML = `
+                        <div class="input-group">
+                            <h3>偏振光实验</h3>
+                            <div class="input-row">
+                                <label for="polar_subproject">选择具体实验：</label>
+                                <select id="polar_subproject" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">
+                                    <option value="brewster">1. 布儒斯特角测定介质折射率</option>
+                                    <option value="malus">2. 马吕斯定律验证（(cosθ)²-I₀点线图）</option>
+                                    <option value="polar">3. 光电流极坐标曲线绘制</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 布儒斯特角实验输入（修复多余<符号） -->
+                            <div id="brewster_input">
+                                <h4>1. 布儒斯特角测定介质折射率</h4>
+                                <table class="table-input">
+                                    <tr>
+                                        <<th>实验次数</</th>
+                                        <<th>角位置φ (°)</</th>
+                                        <<th>角位置φ₀ (°)</</th>
+                                    </tr>
+                                    <tr>
+                                        <td>1</td>
+                                        <td><input type="number" id="phi_1" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="phi0_1" step="0.01" placeholder="输入数值" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2</td>
+                                        <td><input type="number" id="phi_2" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="phi0_2" step="0.01" placeholder="输入数值" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>3</td>
+                                        <td><input type="number" id="phi_3" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="phi0_3" step="0.01" placeholder="输入数值" required></td>
+                                    </tr>
+                                </table>
+                                <div style="margin-top: 15px;">
+                                    <label style="margin-right: 10px;">介质折射率理论值：</label>
+                                    <input type="number" id="theoryN" step="0.001" placeholder="如1.5（玻璃）" required>
+                                </div>
+                            </div>
+                            
+                            <!-- 马吕斯定律实验输入（修复多余<符号） -->
+                            <div id="malus_input" style="display: none;">
+                                <h4>2. 马吕斯定律验证</h4>
+                                <table class="table-input">
+                                    <tr>
+                                        <<th>θ (°)</</th>
+                                        <<th>0</</th>
+                                        <<th>10</</th>
+                                        <<th>20</</th>
+                                        <<th>30</</th>
+                                        <<th>40</</th>
+                                        <<th>50</</th>
+                                        <<th>60</</th>
+                                        <<th>70</</th>
+                                        <<th>80</</th>
+                                        <<th>90</</th>
+                                    </tr>
+                                    <tr>
+                                        <<th>I₀/(I₀-8A)</</th>
+                                        <td><input type="number" id="I0_0" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_1" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_2" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_3" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_4" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_5" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_6" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_7" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_8" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="I0_9" step="0.01" placeholder="输入数值" required></td>
+                                    </tr>
+                                    <tr style="background-color: #f0f8ff;">
+                                        <<th>(cosθ)²</</th>
+                                        <td>1</td><td>0.97</td><td>0.88</td><td>0.75</td><td>0.59</td>
+                                        <td>0.41</td><td>0.25</td><td>0.12</td><td>0.03</td><td>0</td>
+                                    </tr>
+                                </table>
+                                <p style="color: #666; font-size: 14px; margin-top: 5px;">
+                                    注意：图表横坐标(cosθ)²从0到1完整显示，10个数据点对应10个角度值
+                                </p>
+                            </div>
+                            
+                            <!-- 光电流极坐标实验输入（修复多余<符号） -->
+                            <div id="polar_curve_input" style="display: none;">
+                                <h4>3. 光电流极坐标曲线绘制</h4>
+                                <table class="table-input">
+                                    <tr>
+                                        <<th>φ (°)</</th>
+                                        <<th>0</</th><<th>30</</th><<th>60</</th><<th>90</</th><<th>120</</th><<th>150</</th><<th>180</</th><<th>210</</th><<th>240</</th><<th>270</</th><<th>300</</th><<th>330</</th><<th>360</</th>
+                                    </tr>
+                                    <tr>
+                                        <<th>光电流i/(I₀-8A)</</th>
+                                        <td><input type="number" id="polar_i_0" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_1" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_2" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_3" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_4" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_5" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_6" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_7" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_8" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_9" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_10" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_11" step="0.01" placeholder="输入数值" required></td>
+                                        <td><input type="number" id="polar_i_12" step="0.01" placeholder="输入数值" required></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 偏振光小实验切换
+                    document.getElementById('polar_subproject').addEventListener('change', function() {
+                        const subproject = this.value;
+                        document.getElementById('brewster_input').style.display = subproject === 'brewster' ? 'block' : 'none';
+                        document.getElementById('malus_input').style.display = subproject === 'malus' ? 'block' : 'none';
+                        document.getElementById('polar_curve_input').style.display = subproject === 'polar' ? 'block' : 'none';
+                    });
+                    break;
+
+                // 3. 光栅衍射实验（完全还原原始格式，修复多余<符号）
+                case 'grating':
+                    inputArea.innerHTML = `
+                        <div class="input-group">
+                            <h3>光栅衍射实验</h3>
+                            <div class="formula-box">
+                                <p>核心公式：d = 546.1nm / sinφ，λ = d·sinφ，D = |Δφ| / |Δλ|</p>
+                            </div>
+
+                            <!-- 绿光输入组（用于计算光栅常数） -->
+                            <div class="input-group">
+                                <h4>1. 绿光数据（已知λ=546.1nm，用于计算光栅常数d）</h4>
+                                <div class="input-item">
+                                    <label>左侧角左游标φ1'：</label>
+                                    <input type="number" id="green_phi1_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="green_phi1_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>左侧角右游标φ1''：</label>
+                                    <input type="number" id="green_phi1_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="green_phi1_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>           
+                                </div>
+                                <div class="input-item">
+                                    <label>右侧角左游标φ2'：</label>
+                                    <input type="number" id="green_phi2_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="green_phi2_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>右侧角右游标φ2''：</label>
+                                    <input type="number" id="green_phi2_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="green_phi2_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>           
+                                </div>
+                                <div class="input-item">
+                                    <label>光栅常数理论值d₀：</label>
+                                    <input type="number" id="theory_d" step="1" placeholder="单位：nm" required>
+                                </div>
+                            </div>
+
+                            <!-- 黄1光输入组 -->
+                            <div class="input-group">
+                                <h4>2. 黄1光数据（用于计算波长λ）</h4>
+                                <div class="input-item">
+                                    <label>左侧角左游标φ1'：</label>
+                                    <input type="number" id="yellow1_phi1_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow1_phi1_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>左侧角右游标φ1''：</label>
+                                    <input type="number" id="yellow1_phi1_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow1_phi1_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>右侧角左游标φ2'：</label>
+                                    <input type="number" id="yellow1_phi2_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow1_phi2_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>右侧角右游标φ2''：</label>
+                                    <input type="number" id="yellow1_phi2_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow1_phi2_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>            </div>
+                            </div>
+
+                            <!-- 黄2光输入组 -->
+                            <div class="input-group">
+                                <h4>3. 黄2光数据（用于计算波长λ和角色散率）</h4>
+                                <div class="input-item">
+                                    <label>左侧角左游标φ1'：</label>
+                                    <input type="number" id="yellow2_phi1_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow2_phi1_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>            
+                                </div>
+                                <div class="input-item">
+                                    <label>左侧角右游标φ1''：</label>
+                                    <input type="number" id="yellow2_phi1_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow2_phi1_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>右侧角左游标φ2'：</label>
+                                    <input type="number" id="yellow2_phi2_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow2_phi2_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>            </div>
+                                <div class="input-item">
+                                    <label>右侧角右游标φ2''：</label>
+                                    <input type="number" id="yellow2_phi2_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="yellow2_phi2_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>            </div>
+                            </div>
+
+                            <!-- 蓝紫光输入组 -->
+                            <div class="input-group">
+                                <h4>4. 蓝紫光数据（用于计算波长λ）</h4>
+                                <div class="input-item">
+                                    <label>左侧角左游标φ1'：</label>
+                                    <input type="number" id="blueviolet_phi1_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="blueviolet_phi1_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>左侧角右游标φ1''：</label>
+                                    <input type="number" id="blueviolet_phi1_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="blueviolet_phi1_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>            </div>
+                                <div class="input-item">
+                                    <label>右侧角左游标φ2'：</label>
+                                    <input type="number" id="blueviolet_phi2_left_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="blueviolet_phi2_left_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>
+                                </div>
+                                <div class="input-item">
+                                    <label>右侧角右游标φ2''：</label>
+                                    <input type="number" id="blueviolet_phi2_right_deg" min="0" max="360" step="1" placeholder="度（°）" required>
+                                    <span>°</span>
+                                    <input type="number" id="blueviolet_phi2_right_min" min="0" max="59" step="1" placeholder="分（′）" required>
+                                    <span>′</span>            </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+
+            // 自动聚焦第一个输入框
+            setTimeout(() => {
+                const firstInput = document.querySelector('#input-area input[required]');
+                if (firstInput) firstInput.focus();
+            }, 100);
+        });
+
+        // ========== 扭摆法实验计算逻辑（完全还原） ==========
+        function calculateTorsionNatural() {
+            const periods = [];
+            let sumT = 0;
+            for (let i = 1; i <= 10; i++) {
+                const id = `T_${i}`;
+                const input = document.getElementById(id);
+                const value = parseFloat(input.value);
+                if (isNaN(value) || value <= 0) {
+                    alert(`第${i}次周期测量值无效，请输入正数！`);
+                    input.focus();
+                    return null;
+                }
+                periods.push(value);
+                sumT += value;
+            }
+            const avgT = sumT / 10;
+            const omega0 = (2 * Math.PI) / avgT;
+            return {
+                avgT: avgT,
+                omega0: omega0,
+                resultText: `
+                    <h4>固有频率测量结果</h4>
+                    <p><strong>周期平均值 T̄ = ${avgT.toFixed(3)} s</strong></p>
+                    <p style="font-size: 20px; color: #2c3e50; font-weight: bold;">
+                        固有频率 ω₀ = 2π / T̄ = ${omega0.toFixed(4)} rad/s
+                    </p>
+                `,
+                errorText: `
+                    <p><strong>固有频率测量误差可能原因：</strong></p>
+                    <p>1. 计时误差：手动计时存在反应时间延迟</p>
+                    <p>2. 周期判断误差：扭摆经过平衡位置的判断存在主观性</p>
+                    <p>3. 环境干扰：空气阻力、实验台振动等外部因素</p>
+                    <p>4. 扭摆初始条件：释放角度不一致</p>
+                    <p>5. 仪器精度：秒表或计时器本身的精度限制</p>
+                `
+            };
+        }
+
+        function calculateTorsionDamping() {
+            const avgT = parseFloat(document.getElementById('avg_period').value);
+            if (isNaN(avgT) || avgT <= 0) {
+                alert("周期平均值无效，请输入正数！");
+                document.getElementById('avg_period').focus();
+                return null;
+            }
+            const amplitudes = [];
+            for (let i = 1; i <= 10; i++) {
+                const id = `theta_${i}`;
+                const input = document.getElementById(id);
+                const value = parseFloat(input.value);
+                if (isNaN(value) || value <= 0) {
+                    alert(`第${i}次振幅测量值无效，请输入正数！`);
+                    input.focus();
+                    return null;
+                }
+                amplitudes.push(value);
+            }
+            let sumLnRatio = 0;
+            for (let i = 0; i < 5; i++) {
+                const ratio = amplitudes[i] / amplitudes[i + 5];
+                sumLnRatio += Math.log(ratio);
+            }
+            const beta = (1 / (5 * avgT)) * (sumLnRatio / 5);
+            return {
+                beta: beta,
+                resultText: `
+                    <h4>阻尼系数测量结果</h4>
+                    <p><strong>周期平均值 T̄ = ${avgT.toFixed(3)} s</strong></p>
+                    <p style="font-size: 20px; color: #2c3e50; font-weight: bold;">
+                        阻尼系数 β = ${beta.toFixed(6)} s⁻¹
+                    </p>
+                `,
+                errorText: `
+                    <p><strong>阻尼系数测量误差可能原因：</strong></p>
+                    <p>1. 振幅测量误差：角度标尺读数存在视差</p>
+                    <p>2. 非线性阻尼：实际阻尼可能包含非线性成分</p>
+                    <p>3. 振幅衰减不均匀：不同振幅区间阻尼特性不同</p>
+                    <p>4. 环境因素：空气流动、温度变化影响阻尼特性</p>
+                    <p>5. 周期测量误差：周期平均值不准确</p>
+                `
+            };
+        }
+
+        // ========== 偏振光实验计算逻辑（修复极坐标绘图） ==========
+        function calculatePolarBrewster() {
+            const results = [];
+            let sumN = 0;
+            for (let i = 0; i < 3; i++) {
+                const phi = parseFloat(document.getElementById(`phi_${i+1}`).value);
+                const phi0 = parseFloat(document.getElementById(`phi0_${i+1}`).value);
+                if (isNaN(phi) || isNaN(phi0)) {
+                    alert(`第${i+1}组角度值无效，请输入数字！`);
+                    return null;
+                }
+                const iB = phi0 - phi;
+                const n = Math.tan(iB * Math.PI / 180);
+                sumN += n;
+                results.push({
+                    实验次数: i+1,
+                    角位置φ: phi.toFixed(2),
+                    角位置φ0: phi0.toFixed(2),
+                    布儒斯特角iB: iB.toFixed(2),
+                    折射率n: n.toFixed(3)
+                });
+            }
+            const avgN = sumN / 3;
+            const theoryN = parseFloat(document.getElementById('theoryN').value);
+            const percentError = Math.abs((avgN - theoryN) / theoryN) * 100;
+            const percentErrorFixed = percentError.toPrecision(2);
+            
+            let resultTable = `
+                <h4>布儒斯特角测折射率结果</h4>
+                <table class="table-input" style="margin: 10px auto;">
+                    <tr>
+                        <<th>实验次数</</th>
+                        <<th>角位置φ (°)</</th>
+                        <<th>角位置φ₀ (°)</</th>
+                        <<th>布儒斯特角iB (°)</</th>
+                        <<th>折射率n</</th>
+                    </tr>
+            `;
+            results.forEach(item => {
+                resultTable += `
+                    <tr>
+                        <td>${item.实验次数}</td>
+                        <td>${item.角位置φ}</td>
+                        <td>${item.角位置φ0}</td>
+                        <td>${item.布儒斯特角iB}</td>
+                        <td>${item.折射率n}</td>
+                    </tr>
+                `;
+            });
+            resultTable += `
+                </table>
+                <p>折射率平均值：${avgN.toFixed(3)}</p>
+                <p>理论值：${theoryN}</p>
+                <p>百分差：${percentErrorFixed}%（保留两位有效数字）</p>
+            `;
+            
+            return {
+                resultText: resultTable,
+                errorText: `
+                    <p>1. 折射率测量误差可能原因：</p>
+                    <p>- 角度读数误差（如视差、游标卡尺精度限制）；</p>
+                    <p>- 实验装置未调平，入射光与介质表面不平行；</p>
+                    <p>- 反射光偏振化程度未达到100%（非理想偏振光）；</p>
+                    <p>- 环境光干扰，导致消光位置判断不准确。</p>
+                `
+            };
+        }
+
+        function calculateMalus() {
+            const theta = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90];
+            const cos2Theta = [1, 0.97, 0.88, 0.75, 0.59, 0.41, 0.25, 0.12, 0.03, 0];
+            const I0 = [];
+            
+            for (let i = 0; i < 10; i++) {
+                const val = parseFloat(document.getElementById(`I0_${i}`).value);
+                if (isNaN(val)) {
+                    alert(`θ=${theta[i]}°的光强值无效，请输入数字！`);
+                    return null;
+                }
+                I0.push(val);
+            }
+
+            // 绘制马吕斯定律点线图
+            if (chartInstance) chartInstance.destroy();
+            const ctx = document.getElementById('experiment-chart').getContext('2d');
+            const chartContainer = document.getElementById('polar-chart-container');
+            chartContainer.style.display = 'block';
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: cos2Theta.map(val => val.toFixed(2)),
+                    datasets: [{
+                        label: 'I₀/(I₀-8A)',
+                        data: I0,
+                        borderColor: '#3498db',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#e74c3c',
+                        pointRadius: 6,
+                        fill: false,
+                        tension: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: '(cosθ)²', font: { size: 14, weight: 'bold' } },
+                            min: 0,
+                            max: 1,
+                            ticks: { stepSize: 0.1, autoSkip: false }
+                        },
+                        y: {
+                            title: { display: true, text: 'I₀/(I₀-8A)', font: { size: 14, weight: 'bold' } },
+                            min: 0,
+                            suggestedMax: Math.max(...I0) * 1.2
+                        }
+                    },
+                    plugins: {
+                        title: { display: true, text: '马吕斯定律：(cosθ)²-I₀点线图', font: { size: 16, weight: 'bold' } },
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            return {
+                resultText: `
+                    <h4>马吕斯定律验证结果</h4>
+                    <p>已绘制(cosθ)²-I₀点线图，横坐标从0到1完整显示，10个数据点全部渲染。</p>
+                    <p>红色点为测量数据，蓝色直线连接各点（无需拟合）。</p>
+                    <p>将鼠标悬停在数据点上可以查看详细信息（角度、cos²值、光强）。</p>
+                `,
+                errorText: `
+                    <p>1. 光强测量误差可能原因：</p>
+                    <p>- 光源强度不稳定，导致光强读数波动；</p>
+                    <p>- 偏振片旋转角度不准确，偏离设定值；</p>
+                    <p>- 探测器灵敏度不均匀，影响光电流转换精度；</p>
+                    <p>- 环境杂散光干扰，导致光强测量值偏大。</p>
+                `,
+                needChart: true
+            };
+        }
+
+        // 修复后的极坐标曲线计算函数
+        function calculatePolarPolar() {
+            const phi = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360];
+            const current = [];
+            for (let i = 0; i < 13; i++) {
+                const val = parseFloat(document.getElementById(`polar_i_${i}`).value);
+                if (isNaN(val)) {
+                    alert(`φ=${i*30}°的光电流值无效，请输入数字！`);
+                    return null;
+                }
+                current.push(val);
+            }
+
+            // 绘图 - 恢复正确的极坐标点线图逻辑
+            if (chartInstance) chartInstance.destroy();
+            const ctx = document.getElementById('experiment-chart').getContext('2d');
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.style.display = 'block';
+
+            chartInstance = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: phi.map(angle => `${angle}°`),
+                    datasets: [{
+                        label: '光电流i/(I₀-8A)',
+                        data: current,
+                        backgroundColor: 'rgba(155, 89, 182, 0)', // 透明填充
+                        borderColor: 'rgba(155, 89, 182, 1)', // 紫色边框线
+                        borderWidth: 3, // 线条粗细
+                        pointBackgroundColor: 'rgba(46, 204, 113, 1)', // 绿色数据点
+                        pointRadius: 5, // 数据点大小
+                        fill: false // 不填充区域，仅显示点和线
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { display: true, color: 'rgba(0,0,0,0.1)' },
+                            grid: { display: true, color: 'rgba(0,0,0,0.1)' },
+                            pointLabels: {
+                                display: true,
+                                font: { size: 12 },
+                                padding: 15
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: Math.max(...current) * 1.3, // 自动适配数据范围
+                            ticks: {
+                                display: true,
+                                stepSize: Math.ceil(Math.max(...current) / 5),
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: { display: true, text: '光电流i-φ极坐标点线图', font: { size: 16, weight: 'bold' } },
+                        legend: { display: false }
+                    },
+                    elements: {
+                        arc: {
+                            borderWidth: 3 // 确保线条清晰
+                        }
+                    }
+                }
+            });
+
+            return {
+                resultText: `
+                    <h4>光电流极坐标点线图结果</h4>
+                    <p>已绘制0°-360°光电流极坐标点线图：</p>
+                    <ul>
+                        <li><strong>径向（半径）：</strong>表示光电流强度大小</li>
+                        <li><strong>角度：</strong>表示偏振片旋转角度（0°-360°）</li>
+                        <li><strong>绿色数据点：</strong>各角度光电流测量值</li>
+                        <li><strong>紫色连线：</strong>连接相邻数据点形成点线图</li>
+                        <li><strong>同心圆网格：</strong>等光强线</li>
+                        <li><strong>辐射状网格：</strong>角度线（每30°一条）</li>
+                    </ul>
+                    <p>图表为纯点线形式（无填充），符合实验要求，数据点和线条清晰可辨。</p>
+                `,
+                errorText: `
+                    <p><strong>光电流测量误差可能原因：</strong></p>
+                    <p>1. 偏振片定位误差：角度旋转未精确到设定值（每30°一个点）</p>
+                    <p>2. 电路噪声：放大器噪声导致光电流读数波动</p>
+                    <p>3. 探测器响应延迟：无法实时跟踪光强变化</p>
+                    <p>4. 装置振动：光路偏移影响光强检测</p>
+                    <p>5. 环境光干扰：杂散光混入影响测量，特别是在光电流较小时</p>
+                    <p>6. 光源稳定性：汞灯或激光器光强漂移</p>
+                `,
+                needChart: true
+            };
+        }
+
+        // ========== 光栅衍射实验计算逻辑（完全还原） ==========
+        function dmsToDecimal(deg, min) {
+            return parseFloat(deg) + parseFloat(min) / 60;
+        }
+
+        function calculateGratingPhi(phi1_left, phi1_right, phi2_left, phi2_right) {
+            const delta1 = Math.abs(phi2_left - phi1_left);
+            const delta2 = Math.abs(phi2_right - phi1_right);
+            return (delta1 + delta2) / 4;
+        }
+
+        function calculateGratingUd(d, phi) {
+            const phiRad = phi * Math.PI / 180;
+            const sinPhi = Math.sin(phiRad);
+            const deltaPhi = 0.01 * Math.PI / 180;
+            const cotPhi = Math.cos(phiRad) / sinPhi;
+            return Math.abs(d * cotPhi * deltaPhi);
+        }
+
+        function calculateGratingDiffraction() {
+            try {
+                const greenData = {
+                    phi1_left: dmsToDecimal(
+                        document.getElementById('green_phi1_left_deg').value,
+                        document.getElementById('green_phi1_left_min').value
+                    ),
+                    phi1_right: dmsToDecimal(
+                        document.getElementById('green_phi1_right_deg').value,
+                        document.getElementById('green_phi1_right_min').value
+                    ),
+                    phi2_left: dmsToDecimal(
+                        document.getElementById('green_phi2_left_deg').value,
+                        document.getElementById('green_phi2_left_min').value
+                    ),
+                    phi2_right: dmsToDecimal(
+                        document.getElementById('green_phi2_right_deg').value,
+                        document.getElementById('green_phi2_right_min').value
+                    ),
+                    theory_d: parseFloat(document.getElementById('theory_d').value)
+                };
+
+                const yellow1Data = {
+                    phi1_left: dmsToDecimal(
+                        document.getElementById('yellow1_phi1_left_deg').value,
+                        document.getElementById('yellow1_phi1_left_min').value
+                    ),
+                    phi1_right: dmsToDecimal(
+                        document.getElementById('yellow1_phi1_right_deg').value,
+                        document.getElementById('yellow1_phi1_right_min').value
+                    ),
+                    phi2_left: dmsToDecimal(
+                        document.getElementById('yellow1_phi2_left_deg').value,
+                        document.getElementById('yellow1_phi2_left_min').value
+                    ),
+                    phi2_right: dmsToDecimal(
+                        document.getElementById('yellow1_phi2_right_deg').value,
+                        document.getElementById('yellow1_phi2_right_min').value
+                    )
+                };
+
+                const yellow2Data = {
+                    phi1_left: dmsToDecimal(
+                        document.getElementById('yellow2_phi1_left_deg').value,
+                        document.getElementById('yellow2_phi1_left_min').value
+                    ),
+                    phi1_right: dmsToDecimal(
+                        document.getElementById('yellow2_phi1_right_deg').value,
+                        document.getElementById('yellow2_phi1_right_min').value
+                    ),
+                    phi2_left: dmsToDecimal(
+                        document.getElementById('yellow2_phi2_left_deg').value,
+                        document.getElementById('yellow2_phi2_left_min').value
+                    ),
+                    phi2_right: dmsToDecimal(
+                        document.getElementById('yellow2_phi2_right_deg').value,
+                        document.getElementById('yellow2_phi2_right_min').value
+                    )
+                };
+
+                const bluevioletData = {
+                    phi1_left: dmsToDecimal(
+                        document.getElementById('blueviolet_phi1_left_deg').value,
+                        document.getElementById('blueviolet_phi1_left_min').value
+                    ),
+                    phi1_right: dmsToDecimal(
+                        document.getElementById('blueviolet_phi1_right_deg').value,
+                        document.getElementById('blueviolet_phi1_right_min').value
+                    ),
+                    phi2_left: dmsToDecimal(
+                        document.getElementById('blueviolet_phi2_left_deg').value,
+                        document.getElementById('blueviolet_phi2_left_min').value
+                    ),
+                    phi2_right: dmsToDecimal(
+                        document.getElementById('blueviolet_phi2_right_deg').value,
+                        document.getElementById('blueviolet_phi2_right_min').value
+                    )
+                };
+
+                const allData = [greenData, yellow1Data, yellow2Data, bluevioletData];
+                for (const data of allData) {
+                    for (const key in data) {
+                        if (isNaN(data[key]) || data[key] < 0) {
+                            alert(`数据${key}无效，请输入非负数字！`);
+                            return null;
+                        }
+                    }
+                }
+
+                const phiGreen = calculateGratingPhi(
+                    greenData.phi1_left, greenData.phi1_right,
+                    greenData.phi2_left, greenData.phi2_right
+                );
+                const phiYellow1 = calculateGratingPhi(
+                    yellow1Data.phi1_left, yellow1Data.phi1_right,
+                    yellow1Data.phi2_left, yellow1Data.phi2_right
+                );
+                const phiYellow2 = calculateGratingPhi(
+                    yellow2Data.phi1_left, yellow2Data.phi1_right,
+                    yellow2Data.phi2_left, yellow2Data.phi2_right
+                );
+                const phiBlueviolet = calculateGratingPhi(
+                    bluevioletData.phi1_left, bluevioletData.phi1_right,
+                    bluevioletData.phi2_left, bluevioletData.phi2_right
+                );
+
+                const lambdaGreen = 546.1;
+                const phiGreenRad = phiGreen * Math.PI / 180;
+                const d = lambdaGreen / Math.sin(phiGreenRad);
+                const Ud = calculateGratingUd(d, phiGreen);
+                const dFinal = Math.round(d);
+                const UdFinal = Math.round(Ud);
+
+                const lambdaYellow1 = d * Math.sin(phiYellow1 * Math.PI / 180);
+                const lambdaYellow2 = d * Math.sin(phiYellow2 * Math.PI / 180);
+                const lambdaBlueviolet = d * Math.sin(phiBlueviolet * Math.PI / 180);
+
+                const deltaPhi = Math.abs(phiYellow2 - phiYellow1) * Math.PI / 180;
+                const deltaLambda = Math.abs(lambdaYellow2 - lambdaYellow1);
+                const D = deltaPhi / (deltaLambda * 1e-9);
+
+                const resultText = `
+                    <h4>一、光栅常数计算结果</h4>
+                    <p>绿光衍射角φ = ${phiGreen.toFixed(2)}°</p>
+                    <p>光栅常数d = ${dFinal} nm</p>
+                    <p>（公式：d = 546.1nm / sinφ）</p>
+                    <br>
+                    <h4>二、各谱线波长计算结果</h4>
+                    <p>λ黄1 = ${lambdaYellow1.toFixed(1)} nm（衍射角φ = ${phiYellow1.toFixed(2)}°）</p>
+                    <p>λ黄2 = ${lambdaYellow2.toFixed(1)} nm（衍射角φ = ${phiYellow2.toFixed(2)}°）</p>
+                    <p>λ蓝紫 = ${lambdaBlueviolet.toFixed(1)} nm（衍射角φ = ${phiBlueviolet.toFixed(2)}°）</p>
+                    <p>（公式：λ = d * sinφ）</p>
+                    <br>
+                    <h4>三、角色散率计算结果</h4>
+                    <p>Δφ = ${Math.abs(phiYellow2 - phiYellow1).toFixed(2)}°（${deltaPhi.toFixed(6)} rad）</p>
+                    <p>Δλ = ${deltaLambda.toFixed(1)} nm（${(deltaLambda * 1e-9).toFixed(9)} m）</p>
+                    <p>角色散率D = ${D.toFixed(2)} m⁻¹</p>
+                    <p>（公式：D = |Δφ| / |Δλ|）</p>
+                `;
+
+                let errorText = "";
+                if (dFinal > greenData.theory_d) {
+                    errorText = `
+                        <p>1. 光栅常数实测值（${dFinal} nm）大于理论值（${greenData.theory_d} nm），可能原因：</p>
+                        <p>- 绿光衍射角φ测量偏小（如游标读数误差、视差影响）；</p>
+                        <p>- 光栅表面有污渍或划痕，导致衍射光强减弱，读数偏差；</p>
+                        <p>- 实验装置未调平，光栅平面与入射光不垂直。</p>
+                    `;
+                } else if (dFinal < greenData.theory_d) {
+                    errorText = `
+                        <p>1. 光栅常数实测值（${dFinal} nm）小于理论值（${greenData.theory_d} nm），可能原因：</p>
+                        <p>- 绿光衍射角φ测量偏大（如游标读数时估读误差）；</p>
+                        <p>- 入射光并非严格平行光，导致衍射角偏大；</p>
+                        <p>- 光栅刻线不均匀，局部光栅常数偏小。</p>
+                    `;
+                } else {
+                    errorText = `
+                        <p>1. 光栅常数实测值与理论值一致，数据精度较高；</p>
+                        <p>2. 波长测量误差主要来自：</p>
+                        <p>- 衍射角读数的偶然误差；</p>
+                        <p>- 光栅常数的系统误差传递；</p>
+                        <p>3. 角色散率误差主要来自两黄光波长差和角度差的测量偏差。</p>
+                    `;
+                }
+
+                return { resultText: resultText, errorText: errorText };
+            } catch (e) {
+                alert(`计算出错：${e.message}`);
+                return null;
+            }
+        }
+
+        // ========== 主计算函数 ==========
+        function calculate() {
+            try {
+                if (!currentExperiment) {
+                    alert("请先选择实验项目！");
+                    return;
+                }
+
+                const resultContent = document.getElementById('result-content');
+                const errorContent = document.getElementById('error-content');
+                let result = null;
+
+                switch(currentExperiment) {
+                    case 'torsion':
+                        const torsionSubproject = document.getElementById('torsion_subproject').value;
+                        if (torsionSubproject === 'natural_freq') {
+                            result = calculateTorsionNatural();
+                        } else {
+                            result = calculateTorsionDamping();
+                        }
+                        break;
+
+                    case 'polarization':
+                        const polarSubproject = document.getElementById('polar_subproject').value;
+                        if (polarSubproject === 'brewster') {
+                            result = calculatePolarBrewster();
+                        } else if (polarSubproject === 'malus') {
+                            result = calculateMalus();
+                        } else {
+                            result = calculatePolarPolar();
+                        }
+                        break;
+
+                    case 'grating':
+                        result = calculateGratingDiffraction();
+                        break;
+                }
+
+                if (!result) return;
+
+                resultContent.innerHTML = result.resultText;
+                errorContent.innerHTML = result.errorText;
+
+            } catch (e) {
+                console.error("计算错误：", e);
+                document.getElementById('result-content').innerHTML = `<p style="color: #e74c3c;">计算出错：${e.message}</p>`;
+                document.getElementById('error-content').innerHTML = "请检查输入数据后重试。";
+            }
+        }
+
+        // 页面加载初始化
+        window.onload = function() {
+            document.getElementById('input-area').innerHTML = '<div class="tip">请先选择上方的实验项目</div>';
+        };
+    </script>
+</body>
+</html>
